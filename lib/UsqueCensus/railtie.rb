@@ -1,4 +1,4 @@
-require 'UsqueCensus'
+require 'UsqueCensus/version'
 require 'rails'
 module UsqueCensus
   class Railtie < Rails::Railtie
