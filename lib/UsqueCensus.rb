@@ -3,9 +3,16 @@ require 'open-uri'
 require 'FilePather'
 require 'pg'
 require 'yaml'
-require 'UsqueCensus/railtie' if defined?(Rails)
+
 
 module UsqueCensus
+    require 'UsqueCensus/railtie' if defined?(Rails)
+
+    class BackupTask < Rails::Railtie
+      rake_tasks do
+        Dir[File.join(File.dirname(__FILE__),'tasks/*.rake')].each { |f| load f }
+      end
+    end
 
     def self.initialize aws = nil, db = nil
         if aws and db

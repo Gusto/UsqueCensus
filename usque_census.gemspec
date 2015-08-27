@@ -1,10 +1,10 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'FilePather/version'
+require 'UsqueCensus/version'
 
 Gem::Specification.new do |spec|
-  spec.name        = 'usque_census'
+  spec.name        = 'UsqueCensus'
   spec.version     = UsqueCensus::VERSION
   spec.date        = '2015-08-19'
   spec.summary     = "Hola!"

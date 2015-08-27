@@ -1,11 +1,12 @@
 require 'UsqueCensus/version'
+require 'UsqueCensus'
 require 'rails'
+
 module UsqueCensus
   class Railtie < Rails::Railtie
-    railtie_name :usque_census
 
     rake_tasks do
-      load "tasks/test.rake"
+      Dir[File.join(File.dirname(__FILE__),'tasks/*.rake')].each { |f| load f }
     end
   end
 end
