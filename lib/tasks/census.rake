@@ -12,23 +12,35 @@ namespace :usquecensus do
     end
 
     desc('Creates a redshift table with population, state, and county columns')
-    task :create_table_redshift, [:tablename] do |t, args|
-        puts("Creating redshift table...")
-        UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml')
-        UsqueCensus.create_table_redshift args[:tablename]
+    task :create_table, [:tablename, :adapter] do |t, args|
+        puts("Creating table...")
+        if args[:adapter] == 'redshift'
+            UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml', 'redshift')
+        elsif args[:adapter] == 'mysql'
+            UsqueCensus.initialize(nil, Rails.root+'config/database.yml', 'mysql')
+        end
+        UsqueCensus.create_table args[:tablename], args[:adapter]
     end
 
     desc('Loads data from S3 into redshift')
-    task :load_into_redshift, [:file, :bucket, :tablename] do |t, args|
+    task :load_into_db, [:file, :bucket, :tablename, :adapter] do |t, args|
         puts("Loading data into redshift...")
-        UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml')
-        UsqueCensus.load_into_redshift args[:file], args[:bucket], args[:tablename]
+        if args[:adapter] == 'redshift'
+            UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml', 'redshift')
+        elsif args[:adapter] == 'mysql'
+            UsqueCensus.initialize(nil, Rails.root+'config/database.yml', 'mysql')
+        end
+        UsqueCensus.load_into_db args[:file], args[:bucket], args[:tablename], args[:adapter]
     end
 
     desc('Runs the entire census file flow')
-    task :run_all, [:file, :bucket, :tablename] do |t, args|
-        UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml')
-        UsqueCensus.run(args[:file],args[:bucket],args[:tablename])
+    task :run_all, [:file, :bucket, :tablename, :adapter] do |t, args|
+        if args[:adapter] == 'redshift'
+            UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml', 'redshift')
+        elsif args[:adapter] == 'mysql'
+            UsqueCensus.initialize(nil, Rails.root+'config/database.yml', 'mysql')
+        end
+        UsqueCensus.run(args[:file],args[:bucket],args[:tablename], args[:adapter])
     end
 
 end

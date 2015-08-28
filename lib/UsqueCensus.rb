@@ -12,9 +12,9 @@ module UsqueCensus
       end
     end
 
-    def self.initialize aws = nil, db = nil
+    def self.initialize aws = nil, db = nil, adapter
         load_aws aws
-        load_db db
+        load_db adapter, db
     end
 
     def self.load_aws aws = nil
@@ -28,28 +28,51 @@ module UsqueCensus
         end
     end
 
-    def self.load_db db = nil
-        if db
-            db = YAML::load(File.open(db))
-            @@host = db['redshift'][Rails.env]['host']
-            @@port = db['redshift'][Rails.env]['port']
-            @@db = db['redshift'][Rails.env]['database']
-            @@username = db['redshift'][Rails.env]['username']
-            @@password = db['redshift'][Rails.env]['password']
-        else
-            @@host = settings[:redshift][Rails.env][:host]
-            @@port = settings[:redshift][Rails.env][:port]
-            @@db = settings[:redshift][Rails.env][:database]
-            @@username = settings[:redshift][Rails.env][:username]
-            @@password = settings[:redshift][Rails.env][:password]
-        end
-        @@connection = PG::Connection.new({
+    def self.load_db adapter, db = nil
+        if adapter == 'redshift'
+            if db
+                db = YAML::load(File.open(db))
+                @@host = db['redshift'][Rails.env]['host']
+                @@port = db['redshift'][Rails.env]['port']
+                @@db = db['redshift'][Rails.env]['database']
+                @@username = db['redshift'][Rails.env]['username']
+                @@password = db['redshift'][Rails.env]['password']
+            else
+                @@host = settings[:redshift][Rails.env][:host]
+                @@port = settings[:redshift][Rails.env][:port]
+                @@db = settings[:redshift][Rails.env][:database]
+                @@username = settings[:redshift][Rails.env][:username]
+                @@password = settings[:redshift][Rails.env][:password]
+            end
+            @@connection = PG::Connection.new({
             :host       => @@host,
             :port       => @@port,
             :dbname     => @@db,
             :user       => @@username,
             :password   => @@password
         })
+        elsif adapter == 'mysql'
+            if db
+                db = YAML::load(File.open(db))
+                @@host = db[Rails.env]["host"]
+                @@db = db[Rails.env]["database"]
+                @@username = db[Rails.env]["username"]
+                @@password = db[Rails.env]["password"]
+            else
+                @@host = Settings[Rails.env][:host]
+                @@db = Settings[Rails.env][:database]
+                @@username = Settings[Rails.env][:username]
+                @@password = Settings[Rails.env][:password]
+            end
+            puts("Setting up mysql connection...")
+            puts(@@db)
+            @@mysql = Mysql2::Client.new(:host => @@host, :username => @@username, :password => @@password, :database => @@db)
+        else
+            puts('Invalid database adapter')
+            raise 'Unknown adapter'
+        end
+
+        
     end
 
 
@@ -79,7 +102,7 @@ module UsqueCensus
         FilePather.copy file, "s3://#{bucket}/#{destname}"
     end
 
-    def self.create_table_redshift tablename
+    def self.create_table tablename, adapter
         sql = <<-sql
         CREATE TABLE IF NOT EXISTS #{tablename}(
            POP INTEGER          NOT NULL,
@@ -88,8 +111,43 @@ module UsqueCensus
            PRIMARY KEY (STATE, COUNTY)
         );
         sql
-        @@connection.exec(sql)
+        if adapter == 'redshift'
+            @@connection.exec(sql)
+        elsif adapter == 'mysql'
+            @@mysql.query(sql)
+        else
+            raise "Uknown adapter"
+        end
+
     end
+
+    def self.load_into_db filename, bucket, tablename, adapter
+        if adapter == 'redshift'
+            load_into_redshift filename, bucket, tablename
+        elsif adapter == 'mysql'
+            load_into_mysql filename, bucket, tablename
+        else
+            raise "Unknown adapter"
+        end
+    end
+
+    def self.load_into_mysql filename, bucket, tablename
+        begin
+            WebMock.allow_net_connect!
+            FilePather.copy "s3://#{bucket}/#{filename}", '/tmp'
+            sql = <<-sql
+            LOAD DATA INFILE '/tmp/#{filename}' INTO TABLE #{tablename}
+            FIELDS TERMINATED BY ','
+            IGNORE 1 LINES;
+            sql
+            @@mysql.query(sql)
+        rescue Mysql2::Error => e
+            puts('Mysql load failed...')
+            puts(e.message)
+        end
+
+    end
+
 
     def self.load_into_redshift filename, bucket, tablename
         sql = <<-sql
@@ -102,15 +160,15 @@ module UsqueCensus
         @@connection.exec(sql)
     end
 
-    def self.run file, bucket, tablename
+    def self.run file, bucket, tablename, adapter
         puts ("Downloading..")
         download_data file
         puts ("Uploading to S3...")
         upload_to_S3 file, bucket
         puts ("Creating Redshift Table...")
-        create_table_redshift tablename
+        create_table tablename, adapter
         puts ("Loading data into Redshift...")
-        load_into_redshift Pathname(file).basename, bucket, tablename
+        load_into_db Pathname(file).basename, bucket, tablename, adapter
     end
 
 
