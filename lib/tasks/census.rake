@@ -17,7 +17,7 @@ namespace :usquecensus do
         if args[:adapter] == 'redshift'
             UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml', 'redshift')
         elsif args[:adapter] == 'mysql'
-            UsqueCensus.initialize(nil, Rails.root+'config/database.yml', 'mysql')
+            UsqueCensus.initialize(nil, Rails.root+'config/mysql.yml', 'mysql')
         end
         UsqueCensus.create_table args[:tablename], args[:adapter]
     end
@@ -28,7 +28,7 @@ namespace :usquecensus do
         if args[:adapter] == 'redshift'
             UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml', 'redshift')
         elsif args[:adapter] == 'mysql'
-            UsqueCensus.initialize(nil, Rails.root+'config/database.yml', 'mysql')
+            UsqueCensus.initialize(nil, Rails.root+'config/mysql.yml', 'mysql')
         end
         UsqueCensus.load_into_db args[:file], args[:bucket], args[:tablename], args[:adapter]
     end
@@ -38,7 +38,7 @@ namespace :usquecensus do
         if args[:adapter] == 'redshift'
             UsqueCensus.initialize(nil, Rails.root+'config/redshift.yml', 'redshift')
         elsif args[:adapter] == 'mysql'
-            UsqueCensus.initialize(nil, Rails.root+'config/database.yml', 'mysql')
+            UsqueCensus.initialize(nil, Rails.root+'config/mysql.yml', 'mysql')
         end
         UsqueCensus.run(args[:file],args[:bucket],args[:tablename], args[:adapter])
     end
