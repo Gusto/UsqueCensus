@@ -1,3 +1,7 @@
+**WARNING**
+
+**This repo is no longer actively maintained. Use at your own discretion**
+
 # UsqueCensus
 Custom Job Gem which uses census data
 
